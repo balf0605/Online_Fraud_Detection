@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection System</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #6366f1;
+            --primary-dark: #4338ca;
+            --danger: #ef4444;
+            --success: #10b981;
+            --background: #f9fafb;
+            --card: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .card {
+            background-color: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 1.5rem;
+            position: relative;
+        }
+        
+        .card-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card-header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+        
+        .security-icon {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            font-size: 2rem;
+        }
+        
+        .card-body {
+            padding: 2rem;
+        }
+        
+        .input-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+        
+        .input-group .helper-text {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-top: 0.25rem;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            background: var(--background);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+        
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-icon {
+            font-size: 1.2rem;
+        }
+        
+        .transaction-type {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .type-option {
+            flex: 1;
+            min-width: 100px;
+            text-align: center;
+        }
+        
+        .type-option input {
+            display: none;
+        }
+        
+        .type-option label {
+            display: block;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        
+        .type-option input:checked + label {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .result {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            opacity: 0;
+            height: 0;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .result.show {
+            opacity: 1;
+            height: auto;
+            margin-bottom: 1rem;
+        }
+        
+        .result.safe {
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+        
+        .result.fraud {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+        
+        .result h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .result p {
+            font-size: 0.9rem;
+        }
+        
+        .slider-container {
+            padding: 0 10px;
+        }
+        
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 5px;
+            background: var(--border);
+            outline: none;
+            margin: 10px 0;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+        
+        .slider-value {
+            text-align: right;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        @media (max-width: 640px) {
+            .card-header {
+                padding: 1rem;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+            
+            .security-icon {
+                top: 1rem;
+                right: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>Fraud Detection System</h2>
+                <p>Advanced AI-powered transaction analysis</p>
+                <div class="security-icon">🛡️</div>
+            </div>
+            <div class="card-body">
+                <form id="fraudDetectionForm" action="/predict" method="post">
+                    <h3>Transaction Details</h3>
+                    
+                    <div class="transaction-type">
+                        <div class="type-option">
+                            <input type="radio" id="type1" name="type" value="1" checked>
+                            <label for="type1">Payment</label>
+                        </div>
+                        <div class="type-option">
+                            <input type="radio" id="type2" name="type" value="2">
+                            <label for="type2">Transfer</label>
+                        </div>
+                        <div class="type-option">
+                            <input type="radio" id="type3" name="type" value="3">
+                            <label for="type3">Cash Out</label>
+                        </div>
+                        <div class="type-option">
+                            <input type="radio" id="type4" name="type" value="4">
+                            <label for="type4">Debit</label>
+                        </div>
+                        <div class="type-option">
+                            <input type="radio" id="type5" name="type" value="5">
+                            <label for="type5">Cash In</label>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="amount">Transaction Amount</label>
+                        <div class="slider-container">
+                            <input type="range" min="10" max="10000" value="1000" class="slider" id="amountSlider">
+                            <div class="slider-value">₹<span id="amountValue">1000</span></div>
+                        </div>
+                        <input type="hidden" name="amount" id="amount" value="1000">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="oldbalanceOrg">Previous Balance</label>
+                        <input type="text" id="oldbalanceOrg" name="oldbalanceOrg" class="form-control" placeholder="Enter previous balance" required>
+                        <span class="helper-text">Account balance before the transaction</span>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="newbalanceOrig">Current Balance</label>
+                        <input type="text" id="newbalanceOrig" name="newbalanceOrig" class="form-control" placeholder="Enter current balance" required>
+                        <span class="helper-text">Account balance after the transaction</span>
+                    </div>
+                    
+                    <button type="submit" id="submitBtn" class="btn">
+                        <span class="btn-text">Analyze Transaction</span>
+                        <span class="btn-icon">→</span>
+                    </button>
+                </form>
+                
+                <div id="result" class="result">
+                    <!-- Results will be shown here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Amount slider
+        const amountSlider = document.getElementById('amountSlider');
+        const amountValue = document.getElementById('amountValue');
+        const amountInput = document.getElementById('amount');
+        
+        amountSlider.oninput = function() {
+            const value = this.value;
+            amountValue.textContent = value;
+            amountInput.value = value;
+        };
+        
+        // Form submission and result display
+        const form = document.getElementById('fraudDetectionForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const resultDiv = document.getElementById('result');
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Show loading state
+            submitBtn.innerHTML = '<span class="loading"></span> Processing...';
+            submitBtn.disabled = true;
+            
+            // Get form data
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Simulate API call (replace with actual fetch to your Flask backend)
+            setTimeout(() => {
+                // Mock response - in real app, use fetch to your Flask endpoint
+                const mockRisk = Math.random();
+                let resultHTML = '';
+                
+                if (mockRisk < 0.7) {
+                    resultDiv.className = 'result show safe';
+                    resultHTML = `
+                        <h3>Transaction Appears Safe</h3>
+                        <p>Risk score: ${(mockRisk * 100).toFixed(1)}%</p>
+                        <p>This transaction shows normal patterns based on the account history.</p>
+                    `;
+                } else {
+                    resultDiv.className = 'result show fraud';
+                    resultHTML = `
+                        <h3>Potential Fraud Detected</h3>
+                        <p>Risk score: ${(mockRisk * 100).toFixed(1)}%</p>
+                        <p>This transaction has unusual patterns. We recommend additional verification.</p>
+                    `;
+                }
+                
+                resultDiv.innerHTML = resultHTML;
+                
+                // Reset button
+                submitBtn.innerHTML = '<span class="btn-text">Analyze Transaction</span><span class="btn-icon">→</span>';
+                submitBtn.disabled = false;
+                
+                // In a real application, you would send data to your Flask backend:
+                /*
+                fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Handle the response from your Flask app
+                    // Update the result div with the prediction
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                })
+                .finally(() => {
+                    // Reset button state
+                    submitBtn.innerHTML = '<span class="btn-text">Analyze Transaction</span><span class="btn-icon">→</span>';
+                    submitBtn.disabled = false;
+                });
+                */
+            }, 1500);
+        });
+        
+        // Auto-calculate new balance based on old balance and amount
+        const oldBalanceInput = document.getElementById('oldbalanceOrg');
+        const newBalanceInput = document.getElementById('newbalanceOrig');
+        
+        oldBalanceInput.addEventListener('input', calculateNewBalance);
+        amountSlider.addEventListener('input', calculateNewBalance);
+        
+        function calculateNewBalance() {
+            const oldBalance = parseFloat(oldBalanceInput.value) || 0;
+            const amount = parseFloat(amountInput.value) || 0;
+            const type = document.querySelector('input[name="type"]:checked').value;
+            
+            let newBalance = oldBalance;
+            
+            // Simple calculation based on transaction type
+            if (type == 1 || type == 2 || type == 3) { // Payment, Transfer, Cash Out
+                newBalance = Math.max(0, oldBalance - amount);
+            } else if (type == 5) { // Cash In
+                newBalance = oldBalance + amount;
+            }
+            
+            newBalanceInput.value = newBalance.toFixed(2);
+        }
+        
+        // Update calculation when transaction type changes
+        const typeOptions = document.querySelectorAll('input[name="type"]');
+        typeOptions.forEach(option => {
+            option.addEventListener('change', calculateNewBalance);
+        });
+    </script>
+</body>
+</html>
