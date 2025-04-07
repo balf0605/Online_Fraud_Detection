@@ -187,21 +187,23 @@
         fetch('/api/transaction-stats')
             .then(response => response.json())
             .then(data => {
-                // Store the retrieved data
-                dashboardData = data;
+                dashboardData.total = data.total;
+                dashboardData.legitimate = data.legitimate;
+                dashboardData.fraudulent = data.fraudulent;
+                dashboardData.fraud_by_type = {
+                    "PAYMENT": data.fraud_by_type.PAYMENT || 0,
+                    "TRANSFER": data.fraud_by_type.TRANSFER || 0,
+                    "CASH_OUT": data.fraud_by_type.CASH_OUT || 0,
+                    "DEBIT": data.fraud_by_type.DEBIT || 0,
+                    "CASH_IN": data.fraud_by_type.CASH_IN || 0
+                };
                 
-                // Update dashboard statistics
                 updateDashboardStats();
-                
-                // Create chart
                 createFraudChart();
-                
-                // Populate recent transactions
                 populateRecentTransactions(data.recent_transactions);
             })
             .catch(error => {
                 console.error('Error loading dashboard data:', error);
-                // Use mock data for demonstration if API fails
                 createMockData();
                 updateDashboardStats();
                 createFraudChart();
@@ -223,7 +225,6 @@
                 recent_transactions: []
             };
             
-            // Generate mock transactions
             for (let i = 0; i < 10; i++) {
                 const isFraud = Math.random() < 0.2;
                 const types = ["PAYMENT", "TRANSFER", "CASH_OUT", "DEBIT", "CASH_IN"];
@@ -291,7 +292,7 @@
         
         function populateRecentTransactions(transactions) {
             const transactionsTable = document.getElementById('recent-transactions');
-            transactionsTable.innerHTML = ''; // Clear existing rows
+            transactionsTable.innerHTML = '';
             
             transactions.forEach(tx => {
                 addTransactionRow(tx, true);
@@ -324,7 +325,6 @@
                 transactionsTable.appendChild(row);
             }
             
-            // Keep table at maximum 10 rows
             while (transactionsTable.children.length > 10) {
                 transactionsTable.removeChild(transactionsTable.lastChild);
             }
@@ -333,122 +333,49 @@
         // Handle form submission
         document.getElementById('prediction-form').addEventListener('submit', function(e) {
             e.preventDefault();
+            
             const formData = new FormData(this);
             
-            // In a real app, this would be sent to the backend
-            // Here we'll simulate a response for demonstration purposes
-            simulatePrediction(formData)
-                .then(data => {
-                    if (data.error) {
-                        alert('Error: ' + data.error);
-                        return;
-                    }
-                    
-                    const resultDiv = document.getElementById('result');
-                    const resultCard = document.getElementById('result-card');
-                    const resultText = document.getElementById('prediction-result');
-                    const probabilityText = document.getElementById('prediction-probability');
-                    
-                    resultDiv.classList.remove('hidden');
-                    
-                    if (data.prediction === 1) {
-                        resultCard.className = 'p-4 rounded fraudulent';
-                        resultText.textContent = 'Fraudulent Transaction';
-                        resultText.className = 'text-2xl font-bold text-red-600';
-                    } else {
-                        resultCard.className = 'p-4 rounded legitimate';
-                        resultText.textContent = 'Legitimate Transaction';
-                        resultText.className = 'text-2xl font-bold text-green-600';
-                    }
-                    
-                    probabilityText.textContent = data.probability;
-                    
-                    // Update dashboard with new transaction data
-                    updateDashboardWithNewTransaction(data);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred. Please try again.');
-                });
-        });
-        
-        function simulatePrediction(formData) {
-            return new Promise((resolve) => {
-                // Get form values
-                const typeCode = formData.get('type_code');
-                const amount = parseFloat(formData.get('amount'));
-                const oldBalanceOrg = parseFloat(formData.get('oldbalanceOrg'));
-                const newBalanceOrig = parseFloat(formData.get('newbalanceOrig'));
-                const oldBalanceDest = parseFloat(formData.get('oldbalanceDest'));
-                const newBalanceDest = parseFloat(formData.get('newbalanceDest'));
-                
-                // Simple heuristic for demonstration
-                // Higher probability of fraud if amount is large or balances look suspicious
-                const balanceDiff = Math.abs((oldBalanceOrg - amount) - newBalanceOrig);
-                const destBalanceDiff = Math.abs((oldBalanceDest + amount) - newBalanceDest);
-                
-                let fraudProbability = 0;
-                
-                // Suspicious if balance changes don't match transaction amount
-                if (balanceDiff > 1 || destBalanceDiff > 1) {
-                    fraudProbability += 40;
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.error) {
+                    throw new Error(result.error);
                 }
                 
-                // Higher amounts might be more suspicious
-                if (amount > 10000) {
-                    fraudProbability += 30;
-                } else if (amount > 5000) {
-                    fraudProbability += 15;
+                document.getElementById('result').classList.remove('hidden');
+                document.getElementById('result-card').className = `p-4 rounded ${result.status === 'Fraudulent' ? 'fraudulent' : 'legitimate'}`;
+                document.getElementById('prediction-result').textContent = result.status;
+                document.getElementById('prediction-probability').textContent = result.probability;
+                
+                const txType = transactionTypeMap[formData.get('type_code')];
+                const txRecord = {
+                    time: new Date().toLocaleString(),
+                    type: txType,
+                    amount: parseFloat(formData.get('amount')),
+                    status: result.status
+                };
+                addTransactionRow(txRecord, true);
+                
+                dashboardData.total += 1;
+                if (result.status === 'Fraudulent') {
+                    dashboardData.fraudulent += 1;
+                    dashboardData.fraud_by_type[txType] += 1;
+                } else {
+                    dashboardData.legitimate += 1;
                 }
                 
-                // CASH_OUT and TRANSFER might be more suspicious based on domain knowledge
-                if (typeCode === "2" || typeCode === "1") {
-                    fraudProbability += 10;
-                }
-                
-                // Random factor for demonstration
-                fraudProbability += Math.random() * 20;
-                
-                // Cap probability between 1 and 99
-                fraudProbability = Math.min(99, Math.max(1, Math.round(fraudProbability)));
-                
-                // Transaction is fraudulent if probability > 50%
-                const isFraudulent = fraudProbability > 50;
-                
-                setTimeout(() => {
-                    resolve({
-                        prediction: isFraudulent ? 1 : 0,
-                        probability: fraudProbability,
-                        transaction: {
-                            time: new Date().toLocaleString(),
-                            type: transactionTypeMap[typeCode],
-                            amount: amount,
-                            status: isFraudulent ? "Fraudulent" : "Legitimate"
-                        }
-                    });
-                }, 500); // Simulate network delay
+                updateDashboardStats();
+                updateFraudChart();
+            })
+            .catch(err => {
+                console.error('Prediction error:', err);
+                alert('Prediction failed. Please try again later.');
             });
-        }
-        
-        function updateDashboardWithNewTransaction(data) {
-            // Update counters
-            dashboardData.total += 1;
-            
-            if (data.prediction === 1) {
-                dashboardData.fraudulent += 1;
-                const txType = transactionTypeMap[document.getElementById('type_code').value];
-                dashboardData.fraud_by_type[txType] += 1;
-            } else {
-                dashboardData.legitimate += 1;
-            }
-            
-            // Update UI
-            updateDashboardStats();
-            updateFraudChart();
-            
-            // Add new transaction to the table
-            addTransactionRow(data.transaction, true);
-        }
+        });
     </script>
 </body>
 </html>
